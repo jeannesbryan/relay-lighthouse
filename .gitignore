@@ -1,0 +1,33 @@
+# ==========================================
+# RELAY LIGHTHOUSE: STEALTH CLOAK
+# ==========================================
+
+# ------------------------------------------------------------------
+# Runtime data. The database is created by setup_lighthouse.php and
+# holds the registry of public stations, so it must never travel.
+#
+# NOTE: this is /data/* and NOT /data/ . Git does not descend into an
+# excluded directory, so a negation for a file inside it can never
+# match - which is how the node's data/.htaccess once ended up
+# untracked, leaving a fresh clone with no protection for the database
+# it was about to create. Excluding the CONTENTS lets the negation
+# below take effect.
+# ------------------------------------------------------------------
+/data/*
+
+# ---------------------------------------------------------------
+# The access rules inside data/ MUST be tracked. The directory's
+# runtime contents stay ignored; only the rules travel.
+# ---------------------------------------------------------------
+!/data/.htaccess
+
+# ------------------------------------------------------------------
+# The real configuration carries the admin token that authorises the
+# kill signal. Only the example ships; the live file stays local.
+# ------------------------------------------------------------------
+/lighthouse_config.php
+
+# ------------------------------------------------------------------
+# Build artifacts
+# ------------------------------------------------------------------
+*.zip

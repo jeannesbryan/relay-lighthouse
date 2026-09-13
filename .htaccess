@@ -1,0 +1,129 @@
+# ==========================================================================
+# RELAY STATION: LIGHTHOUSE (HUB) HARDENING
+# ==========================================================================
+# Written for Apache, which is what DirectAdmin shared hosting runs. Unlike
+# the node's copy this file is used as-is: there is no nginx translation of
+# it to keep in step.
+#
+# This is defence in depth behind the application-level checks, not a
+# replacement for them.
+
+# --------------------------------------------------------------------------
+# 1. Never serve database files or editor/backup leftovers
+# --------------------------------------------------------------------------
+# The registry lives in data/lighthouse.sqlite and its WAL sidecars share the
+# same base name. setup_lighthouse.php already drops a deny-all .htaccess
+# inside data/; this extension rule covers a copy that ends up elsewhere.
+<FilesMatch "\.(sqlite|sqlite3|sqlite-wal|sqlite-shm|db|db-wal|db-shm)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# --------------------------------------------------------------------------
+# 2. Protect dotfiles
+# --------------------------------------------------------------------------
+# .env, .git, .gitignore and friends. A served .git exposes the whole source
+# history, including any secret ever committed to it.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# --------------------------------------------------------------------------
+# 3. The admin token must never be reachable
+# --------------------------------------------------------------------------
+# lighthouse_config.php holds the token that authorises the `kill` action of
+# api_register.php - the power to delist another operator's node. Nothing
+# legitimate fetches it over HTTP; the API files require it off the
+# filesystem. Requesting it directly would output nothing today, but that
+# depends on the file never growing an echo, so deny it outright.
+<Files "lighthouse_config.php">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</Files>
+
+# --------------------------------------------------------------------------
+# 4. core/ is library code, not an endpoint
+# --------------------------------------------------------------------------
+# api_register.php and api_directory.php pull security.php in through the
+# filesystem (__DIR__), which .htaccess cannot interfere with. Nothing in
+# index.html calls core/ over HTTP, so the whole directory is denied.
+# (The node is different: its console fetches core/*.php directly.)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^core/ - [F,L]
+</IfModule>
+<IfModule mod_alias.c>
+    RedirectMatch 404 /core/
+</IfModule>
+
+# --------------------------------------------------------------------------
+# 5. Directory listings off
+# --------------------------------------------------------------------------
+# Without this, a request for /data/ or /assets/ with no index file returns a
+# browsable listing of every file in it.
+Options -Indexes
+
+# --------------------------------------------------------------------------
+# 6. The landing page owns the root
+# --------------------------------------------------------------------------
+# Spelled out rather than left to the host default so index.html wins even if
+# an index.php is ever added beside it.
+DirectoryIndex index.html
+
+# --------------------------------------------------------------------------
+# 7. Turn off PHP error display
+# --------------------------------------------------------------------------
+# Errors must not be rendered into responses: they leak paths and SQL. They
+# still reach the server log.
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+</IfModule>
+
+# --------------------------------------------------------------------------
+# 8. Baseline response headers
+# --------------------------------------------------------------------------
+# HSTS is deliberately absent. It is a long-lived commitment for the whole
+# domain; a mistake locks users out of every subdomain. Add it only once you
+# are certain every subdomain is HTTPS-capable:
+#     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set X-Frame-Options "DENY"
+</IfModule>
+
+# --------------------------------------------------------------------------
+# 9. The setup script is an installation step, not a page
+# --------------------------------------------------------------------------
+# setup_lighthouse.php carries its own run-once guard (it answers 409 once
+# data/lighthouse.sqlite exists) and its own note telling you to delete it.
+#
+# The recommended flow on DirectAdmin is: upload everything, open
+#   https://emptyhub.my.id/setup_lighthouse.php
+# once, then DELETE the file. Deleting is stronger than blocking, because it
+# removes the code as well as the route.
+#
+# If you would rather not have it reachable at all, uncomment the two lines
+# below, run the setup first, then clear them - or run it from the
+# DirectAdmin terminal with:  php setup_lighthouse.php
+#
+#<Files "setup_lighthouse.php">
+#    Require all denied
+#</Files>

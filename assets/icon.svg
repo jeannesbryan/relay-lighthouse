@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512">
+  <rect width="256" height="256" fill="#030303" rx="48" />
+
+  <defs>
+    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g stroke="#00ff41" fill="none" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#neon-glow)">
+    
+    <path d="M 108 40 Q 128 24 148 40" stroke-width="6" />
+    <path d="M 92 20 Q 128 0 164 20" stroke-width="6" />
+
+    <path d="M 64 88 Q 128 136 192 88" />
+    <line x1="128" y1="112" x2="128" y2="64" />
+    <circle cx="128" cy="60" r="4" fill="#00ff41" />
+
+    <line x1="128" y1="112" x2="128" y2="168" />
+    <path d="M 100 168 L 128 128 L 156 168" stroke-width="6" />
+
+    <rect x="56" y="168" width="144" height="56" rx="6" />
+    <rect x="108" y="184" width="40" height="40" fill="#00ff41" />
+    <line x1="72" y1="184" x2="88" y2="184" stroke-width="6" />
+    <line x1="72" y1="204" x2="88" y2="204" stroke-width="6" />
+    <line x1="168" y1="184" x2="184" y2="184" stroke-width="6" />
+    <line x1="168" y1="204" x2="184" y2="204" stroke-width="6" />
+    
+  </g>
+</svg>

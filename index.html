@@ -1,0 +1,578 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay Station | Sovereign Communication Node</title>
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/terminal.css">
+    <style>
+        .hero-section { min-height: 75vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; }
+        .hero-title { font-size: 3.5rem; color: var(--t-green); margin-bottom: 10px; text-shadow: 0 0 15px rgba(var(--t-accent-rgb), 0.4); text-transform: uppercase; letter-spacing: 2px; }
+        .hero-subtitle { font-size: 1.1rem; color: var(--t-green-dim); max-width: 750px; margin-bottom: 40px; line-height: 1.7; }
+        @media (max-width: 768px) { .hero-title { font-size: 2rem; } }
+        
+        .sponsor-logo { filter: invert(1) opacity(0.9); transition: 0.3s ease; }
+        .sponsor-card:hover .sponsor-logo { filter: invert(1) drop-shadow(0 0 8px rgba(var(--t-accent-rgb), 0.6)); }
+
+        /* Lighthouse Card Styles */
+        .node-card { border: 1px solid var(--t-green-dim); background: rgba(var(--t-accent-rgb), 0.02); transition: all 0.3s ease; }
+        .node-card:hover { border-color: var(--t-green); background: rgba(var(--t-accent-rgb), 0.05); box-shadow: 0 0 15px rgba(var(--t-accent-rgb), 0.1); transform: translateY(-2px); }
+        .copy-btn { cursor: pointer; }
+    </style>
+</head>
+<body class="t-crt">
+
+    <div id="t-splash-screen" class="t-splash" style="z-index: 999999; background-color: var(--bg-base);">
+        <div class="font-bold text-success text-center" id="splash-text" style="font-size: 1.2rem; letter-spacing: 2px; text-shadow: 0 0 8px currentColor;">
+            > ESTABLISHING_CONNECTION<span class="t-loading-dots"></span>
+        </div>
+    </div>
+
+    <nav class="t-navbar m-0">
+        <div class="t-nav-brand d-flex align-items-center gap-2">
+            <span class="t-led-dot t-led-green"></span>
+            RELAY_STATION <span class="fs-small text-muted fw-normal ml-2">> V8.0 <span class="text-success">AEGIS</span></span>
+        </div>
+        <div class="t-nav-menu">
+            <a href="#terminology">[ LORE ]</a>
+            <a href="#features">[ FEATURES ]</a>
+            <a href="#capacity">[ CAPACITY ]</a>
+            <a href="#lighthouse">[ DIRECTORY ]</a>
+            <a href="#architecture">[ SPECS ]</a>
+            <a href="https://github.com/jeannesbryan/relay-station/blob/main/SECURITY.md" target="_blank">[ WAF_GUIDE ]</a>
+            <a href="https://github.com/jeannesbryan/relay-station" target="_blank">[ GITHUB ]</a>
+        </div>
+    </nav>
+
+    <div class="t-container-fluid mt-0">
+        
+        <section class="hero-section">
+            <h1 class="hero-title font-bold" id="hero-title" style="min-height: 1.2em;"></h1>
+            <p class="hero-subtitle" id="hero-subtitle" style="opacity: 0; transition: opacity 1s ease;">
+                A sovereign, decentralized P2P communication node built for the open web.
+                No CDN, no third-party fonts, no external calls at all - your UI framework is served from your own
+                server, and your visitors are beaconed to nobody. Deploy your station, connect with allies, and
+                communicate freely without algorithms or corporate oversight.
+            </p>
+
+            <style>
+                .t-radar-container { width: 100%; max-width: 600px; height: 200px; margin: 0 auto 40px auto; position: relative; border: 1px dashed var(--t-green-dim); background: rgba(var(--t-accent-rgb), 0.02); border-radius: 4px; overflow: hidden; opacity: 0; transition: opacity 1s ease 0.2s; display: flex; align-items: center; justify-content: center; }
+                .holo-log { position: absolute; top: 10px; left: 15px; font-size: 11px; color: var(--t-green); opacity: 0.8; font-weight: bold; text-shadow: 0 0 5px var(--t-green); }
+                
+                /* Nodes */
+                .h-node { position: absolute; border-radius: 50%; transition: all 0.5s ease; z-index: 10; }
+                .n-local { width: 14px; height: 14px; background: var(--t-green); box-shadow: 0 0 10px var(--t-green); left: 20%; top: 50%; transform: translateY(-50%); }
+                .n-remote { width: 14px; height: 14px; background: var(--t-yellow); box-shadow: 0 0 10px var(--t-yellow); right: 20%; top: 50%; transform: translateY(-50%); opacity: 0; }
+                .n-const { width: 8px; height: 8px; background: var(--t-green-dim); box-shadow: 0 0 5px var(--t-green-dim); opacity: 0; }
+                .nc1 { top: 20%; left: 40%; } .nc2 { top: 80%; left: 60%; } .nc3 { top: 30%; right: 10%; } .nc4 { top: 75%; left: 10%; }
+
+                /* Links */
+                .h-link { position: absolute; height: 2px; background: var(--t-green-dim); box-shadow: 0 0 5px var(--t-green-dim); top: 50%; transform: translateY(-50%); left: 20%; width: 0; transition: width 0.5s ease; z-index: 5; transform-origin: left; display: flex; align-items: center; }
+                .link-c { position: absolute; height: 1px; background: rgba(var(--t-accent-rgb), 0.3); opacity: 0; transition: opacity 1s ease; z-index: 4; transform-origin: left; }
+                
+                /* Data Packets */
+                .packet { width: 6px; height: 6px; background: #fff; border-radius: 50%; box-shadow: 0 0 8px #fff; position: absolute; opacity: 0; }
+                @keyframes sendPacket { 0% { left: 0; opacity: 1; } 50% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+                @keyframes recvPacket { 0% { left: 100%; opacity: 1; background: var(--t-yellow); box-shadow: 0 0 8px var(--t-yellow); } 50% { opacity: 1; } 100% { left: 0; opacity: 0; } }
+
+                /* State: Phase 2 (Scanning & Handshake) */
+                .phase-scan .n-remote { opacity: 1; }
+                .phase-scan .h-link { width: 60%; }
+                
+                /* State: Phase 3 (Transmission/WAL) */
+                .phase-tx .n-remote { opacity: 1; }
+                .phase-tx .h-link { width: 60%; }
+                .phase-tx .p1 { animation: sendPacket 1.5s infinite linear; }
+                .phase-tx .p2 { animation: recvPacket 1.5s infinite linear 0.7s; }
+
+                /* State: Phase 4 (Constellation) */
+                .phase-const .n-remote { opacity: 1; background: var(--t-green); box-shadow: 0 0 10px var(--t-green); }
+                .phase-const .h-link { width: 60%; }
+                .phase-const .n-const { opacity: 1; }
+                .phase-const .link-c { opacity: 1; }
+                
+                /* Hardcoded angles for constellation net */
+                .lc1 { top: 50%; left: 20%; width: 25%; transform: rotate(-50deg); }
+                .lc2 { top: 50%; left: 20%; width: 45%; transform: rotate(35deg); }
+                .lc3 { top: 20%; left: 40%; width: 45%; transform: rotate(15deg); }
+                .lc4 { top: 80%; left: 60%; width: 35%; transform: rotate(-55deg); }
+            </style>
+
+            <div id="radar-hologram" class="t-radar-container phase-iso">
+                <div id="holo-log" class="holo-log">> STATUS: ISOLATED_NODE</div>
+                
+                <div class="h-node n-local"></div>
+                <div class="h-node n-remote"></div>
+                <div class="h-node n-const nc1"></div>
+                <div class="h-node n-const nc2"></div>
+                <div class="h-node n-const nc3"></div>
+                <div class="h-node n-const nc4"></div>
+
+                <div class="h-link">
+                    <div class="packet p1"></div>
+                    <div class="packet p2"></div>
+                </div>
+
+                <div class="link-c lc1"></div>
+                <div class="link-c lc2"></div>
+                <div class="link-c lc3"></div>
+                <div class="link-c lc4"></div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Inject fade-in for hologram
+                    setTimeout(() => { document.getElementById('radar-hologram').style.opacity = '1'; }, 2000);
+
+                    // Hologram State Machine
+                    const holo = document.getElementById('radar-hologram');
+                    const log = document.getElementById('holo-log');
+                    
+                    const states = [
+                        { class: 'phase-iso', text: '> STATUS: ISOLATED_NODE' },
+                        { class: 'phase-scan', text: '> TARGET_LOCKED: INITIATING_HANDSHAKE' },
+                        { class: 'phase-tx', text: '> E2E_LINK_ESTABLISHED: BI-DIRECTIONAL_TX' },
+                        { class: 'phase-const', text: '> CONSTELLATION_ORGANIC_NETWORK_ACTIVE' }
+                    ];
+                    
+                    let currState = 0;
+                    setInterval(() => {
+                        currState = (currState + 1) % states.length;
+                        holo.className = 't-radar-container ' + states[currState].class;
+                        log.innerText = states[currState].text;
+                    }, 4000); // Mengubah fase setiap 4 detik
+                });
+            </script>
+            <div class="d-flex justify-content-center flex-wrap gap-3" id="hero-buttons" style="opacity: 0; transition: opacity 1s ease 0.3s;">
+                <a href="#download" class="t-btn font-bold t-glow">[ DEPLOY_NODE ]</a>
+                <a href="https://github.com/jeannesbryan/relay-station" class="t-btn warning" target="_blank">[ VIEW_SOURCE_CODE ]</a>
+            </div>
+        </section>
+
+        <section id="terminology" class="mb-5 t-container">
+            <h2 class="t-card-header text-center mb-4">> SYSTEM_TERMINOLOGY</h2>
+            <div class="t-grid t-grid-3">
+                <div class="t-card mb-0 text-center">
+                    <h3 class="font-bold mb-3 text-success">🛰️ RELAY NODE</h3>
+                    <p class="text-muted fs-small m-0">The software you install on your server. Think of it as your independent, sovereign star shining alone in the digital void.</p>
+                </div>
+                <div class="t-card mb-0 text-center">
+                    <h3 class="font-bold mb-3 text-success">🗺️ STAR CHART</h3>
+                    <p class="text-muted fs-small m-0">Your station's radar. A contact list where you input the exact coordinates (URLs) of other trusted nodes you wish to follow.</p>
+                </div>
+                <div class="t-card mb-0 text-center">
+                    <h3 class="font-bold mb-3 text-success">🌌 CONSTELLATION</h3>
+                    <p class="text-muted fs-small m-0">The decentralized network formed organically when multiple Relay Nodes connect and exchange signals with each other.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="mb-5 t-container-fluid">
+            <h2 class="t-card-header text-center mb-4">> CORE_TACTICAL_FEATURES</h2>
+            <div class="t-grid t-grid-3">
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> THE RELAY PROTOCOL</h3>
+                    <p class="text-muted fs-small m-0">Seamlessly re-broadcast and curate transmissions from allied nodes across your Constellation without relying on centralized algorithms.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> THE ANTI-LOOP SHIELD</h3>
+                    <p class="text-muted fs-small m-0">Strict origin DNA tracking instantly detects and eliminates signal reverberations to prevent network spam loops and Echo Chambers.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-danger">> CASCADING CHAIN-PURGE</h3>
+                    <p class="text-muted fs-small m-0">When a commander deletes a transmission, the destruction signal dynamically cascades to wipe mirrored data across the entire Trust Chain.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> SOVEREIGN DATA</h3>
+                    <p class="text-muted fs-small m-0">You own the server, the database, and the media. Zero reliance on central servers, and since v8.0 zero third-party requests of any kind - the interface framework is vendored locally. No MySQL setup required.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> SIGNAL RESONANCE</h3>
+                    <p class="text-muted fs-small m-0">A decentralized [ 📻 ROGER THAT ] protocol with built-in Anti-Spam mitigation to acknowledge allied signals.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> THE MEMORY VAULT</h3>
+                    <p class="text-muted fs-small m-0">A dedicated Bookmark system powered by INNER JOIN. Safely pin transmissions locally without data redundancy.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> SYMMETRIC HANDSHAKE</h3>
+                    <p class="text-muted fs-small m-0">Perfect cryptographic alignment during the mutual follow sequence, completely eliminating 401 Spoofing Paradox errors.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> THE ORACLE SENTINEL</h3>
+                    <p class="text-muted fs-small m-0">Real-time tactical alerts sent to your Telegram. Get instantly notified of incoming DMs, followers, and security breaches.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> THE NOMADIC PROTOCOL</h3>
+                    <p class="text-muted fs-small m-0">Absolute domain independence. Migrate your SQLite database to a new domain, and your station automatically re-syncs your coordinates across the constellation.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> STATION ARCHIVE & ESCAPE POD</h3>
+                    <p class="text-muted fs-small m-0">Download a full ZIP backup of your station or an emergency export of your core SQLite memory from the Control Room. Both are token-protected in v8.0 and cannot be triggered by a third-party page.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> ANTI-COLLISION WAL ENGINE</h3>
+                    <p class="text-muted fs-small m-0">Core memory operates on Write-Ahead Logging (WAL) and PRAGMA busy_timeout, gracefully handling high-traffic simultaneous bombardments without locking.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> THE QUANTUM GATE</h3>
+                    <p class="text-muted fs-small m-0">Silky smooth, zero-reload authentication. Your Master Passcode decrypts your Vault and logs you in simultaneously in milliseconds.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> THE LIGHTHOUSE PROTOCOL</h3>
+                    <p class="text-muted fs-small m-0">An opt-in headless directory. Transmit your coordinates to a central beacon to be discovered organically, or stay completely hidden.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> ENCRYPTED KEY VAULT</h3>
+                    <p class="text-muted fs-small m-0">Log in from multiple devices securely. Your E2E Private Key is locked via AES-GCM encryption on the server, decrypted only by your Passcode.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-warning">> E2E LASER LINKS</h3>
+                    <p class="text-muted fs-small m-0">Direct Point-to-Point messages protected by RSA-OAEP 2048-bit End-to-End Encryption. Zero-knowledge database storage.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-danger">> SCORCHED EARTH & PURGE</h3>
+                    <p class="text-muted fs-small m-0">Fire silent tactical missiles to permanently wipe specific Direct Messages or Public Broadcasts from both your server and remote target nodes.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-danger">> GHOST PROTOCOL</h3>
+                    <p class="text-muted fs-small m-0">Transmit highly sensitive text and media that physically self-destruct from the core memory and server after 24 hours.</p>
+                </div>
+                <div class="t-card mb-0" style="border-color: var(--t-red); background: rgba(255,0,65,0.05);">
+                    <h3 class="font-bold mb-2 text-danger">> BUNKER MODE</h3>
+                    <p class="text-muted fs-small m-0">Go dark. Seal your public timeline and turn your station into a private node where you manually approve or reject follower requests.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> ADVANCED MEDIA MATRIX</h3>
+                    <p class="text-muted fs-small m-0">Attach up to 4 mixed media files (Images, Video, PTT Audio) simultaneously. The engine renders them into a seamless 2x2 CSS Grid.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> PTT AUDIO LOGS</h3>
+                    <p class="text-muted fs-small m-0">Hold to record Walkie-Talkie style voice transmissions via native Web Audio API, complete with tactical squelch effects.</p>
+                </div>
+                <div class="t-card mb-0">
+                    <h3 class="font-bold mb-2 text-success">> THE ACK PROTOCOL</h3>
+                    <p class="text-muted fs-small m-0">A decentralized, silent read-receipt system. Know exactly when your encrypted Laser Links have been decrypted by the target.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="capacity" class="mb-5 t-container">
+            <h2 class="t-card-header text-center mb-2">> SERVER_CAPACITY_PROJECTIONS</h2>
+            <p class="text-center text-muted mb-4 fs-small">Relay is extremely lightweight. Expected P2P performance on a standard <strong>$1/month Shared Hosting</strong> (1 Core CPU, 1GB RAM, 25 Entry Processes):</p>
+            
+            <div class="t-grid t-grid-3">
+                <div class="t-card mb-0" style="border-color: var(--t-green-dim);">
+                    <h3 class="font-bold mb-2 text-success"><span class="t-led-dot t-led-green"></span> GREEN ZONE</h3>
+                    <div class="text-success mb-2" style="font-size: 11px;">10 - 150 ALLIED NODES</div>
+                    <p class="text-muted fs-small m-0">Optimal performance. Constellation mass-broadcasts take only 2-5 seconds. Zero connection errors.</p>
+                </div>
+                <div class="t-card mb-0 warning">
+                    <h3 class="font-bold mb-2 text-warning"><span class="t-led-dot t-led-yellow"></span> YELLOW ZONE</h3>
+                    <div class="text-warning mb-2" style="font-size: 11px;">150 - 300 ALLIED NODES</div>
+                    <p class="text-muted fs-small m-0">Connection queues start building. Multi-cURL mass-broadcasts will take around 10-20 seconds to propagate.</p>
+                </div>
+                <div class="t-card mb-0 danger">
+                    <h3 class="font-bold mb-2 text-danger"><span class="t-led-dot t-led-red"></span> RED ZONE</h3>
+                    <div class="text-danger mb-2" style="font-size: 11px;">> 400 ALLIED NODES</div>
+                    <p class="text-muted fs-small m-0">High risk of crash. Vulnerable to Error 508 (Resource Limit Exceeded) due to extreme CPU execution limits.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="hosting" class="mb-5 t-container">
+             <div class="t-card p-5 text-center d-flex flex-column align-items-center" style="border-color: var(--t-green-dim); background: rgba(var(--t-accent-rgb), 0.02);">
+                 <h2 class="text-warning mb-3">> APPROVED_INFRASTRUCTURE</h2>
+                 <p class="text-muted mb-4" style="max-width: 600px;">To ensure your sovereign node remains online and resilient within the Constellation, we highly recommend deploying on <strong>HostBadak Cloud Hosting</strong>. It perfectly matches Relay Station's lightweight technical specifications.</p>
+                 
+                 <!-- The sponsor mark was previously a hotlinked <img> from the sponsor's
+                      own host, which made every visitor's IP and referrer a third-party
+                      request. Rendered as type instead, which also suits the terminal
+                      aesthetic. If the sponsor requires their actual logo, host the file
+                      locally and point this at it. -->
+                 <a href="https://www.hostbadak.com/cloud-hosting-essential.html" target="_blank" class="mb-4 sponsor-card" style="display: inline-block; padding: 15px 30px; background: rgba(255,255,255,0.03); border: 1px dashed var(--t-green); border-radius: 4px; text-decoration: none;">
+                     <span class="font-bold text-warning" style="font-size: 1.1rem; letter-spacing: 2px;">HOSTBADAK<span class="text-muted" style="font-size: 0.75rem;"> // CLOUD_HOSTING</span></span>
+                 </a>
+                 <br>
+                 <a href="https://www.hostbadak.com/cloud-hosting-essential.html" target="_blank" class="t-btn warning font-bold">[ DEPLOY ON HOSTBADAK ]</a>
+             </div>
+        </section>
+
+        <section id="lighthouse" class="mb-5 t-container-fluid">
+            <h2 class="t-card-header text-center mb-2">> THE_LIGHTHOUSE_DIRECTORY</h2>
+            <p class="text-center text-muted mb-4 fs-small">
+                > ACTIVE PUBLIC RELAY STATIONS IN THE CONSTELLATION 
+                (<span id="node-count" class="text-success font-bold t-blink">SCANNING...</span>)
+            </p>
+            
+            <div id="directory-grid" class="t-grid t-grid-3">
+                <div class="text-center text-muted" style="grid-column: 1 / -1; padding: 50px;">
+                    > INITIATING_DEEP_SPACE_SCAN... <span class="t-loading-dots"></span>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <p class="fs-small text-muted">> TO JOIN THIS DIRECTORY, ENABLE OPT-IN IN YOUR RELAY CONSOLE.</p>
+                <p class="fs-small text-muted" style="opacity: 0.5;">Lighthouse Engine powered by <strong>emptyhub.my.id</strong></p>
+            </div>
+        </section>
+
+        <section id="architecture" class="mb-5 t-container">
+            <h2 class="t-card-header mb-4">> SECURITY_&_ARCHITECTURE</h2>
+            <p class="text-muted fs-small mb-4 text-center">
+                > V8.0 <span class="text-success font-bold">AEGIS</span> - a full security and architecture overhaul.
+                All perimeter defences were consolidated into a single audited layer, and every outbound
+                request, state-changing action and upload path was re-examined.
+            </p>
+            <div class="t-grid-layout">
+                <div class="t-main-panel t-card mb-0">
+                    <h3 class="text-success mb-3">> ENFORCED PROTOCOLS</h3>
+                    <ul class="t-list-group m-0" style="border: none;">
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>Strict Allowlist Validation:</strong> <span class="fs-small text-muted">Values that control behaviour are checked against exact allowlists - not stripped of markup - and every value is escaped where it is rendered.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>Symmetric Key Exchange:</strong> <span class="fs-small text-muted">Exchanges and enforces secret tokens to prevent cross-domain 401 Spoofing.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>End-to-End Encryption:</strong> <span class="fs-small text-muted">Zero-knowledge storage. Private keys never leave the browser.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>Rate Limiting:</strong> <span class="fs-small text-muted">Protects endpoints against signal flooding (Max 5 req/min).</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>Symmetrical Firewall:</strong> <span class="fs-small text-muted">Only accepts signals from nodes listed in your Star Chart.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>Anti-Brute Force:</strong> <span class="fs-small text-muted">Freezes console access for 15 minutes after 5 failed login attempts.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong>Strict SSL Enforcement:</strong> <span class="fs-small text-muted">Blocks unencrypted HTTP requests to prevent MitM attacks.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">CSRF-Protected Actions:</strong> <span class="fs-small text-muted">Every state-changing action requires a POST with a per-session token. Destructive controls can no longer be fired by a stray link or an image tag on a third-party page.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">SSRF Containment:</strong> <span class="fs-small text-muted">Outbound node requests must be HTTPS on a standard port and resolve only to publicly routable addresses. Loopback, private, link-local and cloud-metadata targets are refused, and the validated address is pinned so DNS cannot be re-pointed mid-request.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">Verified TLS Everywhere:</strong> <span class="fs-small text-muted">Certificate and hostname verification is enforced on every outbound request, with redirects not followed.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">Hardened Sessions:</strong> <span class="fs-small text-muted">Session identifiers are rotated on login, cookies are Secure, HttpOnly and SameSite=Strict, and both idle and absolute lifetimes apply.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">Core Memory Shielded:</strong> <span class="fs-small text-muted">The SQLite core, its write-ahead logs, dotfiles and the deployment-local directory are all denied over HTTP.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">Spoof-Resistant Limits:</strong> <span class="fs-small text-muted">Client identity comes from the TCP peer address, not from headers a caller can set - so the brute-force lockout and the rate limiters cannot be rotated around.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-green-dim); padding: 10px 0;">
+                            <strong class="text-success">Audited Media Pipeline:</strong> <span class="fs-small text-muted">Uploads are size-capped and typed from their own contents, so the file written to disk never takes its type from the name the sender supplied.</span>
+                        </li>
+                    </ul>
+                    <div class="t-window mt-4 mb-0">
+                        <div class="t-window-header"><span>security_protocols.log</span><span>[ - ] [ X ]</span></div>
+                        <pre class="t-window-body"><code>> Auth Perimeter (single guard): ACTIVE
+> CSRF Token Enforcement: ACTIVE
+> POST-Only State Changes: ACTIVE
+> SSRF Containment: ACTIVE
+> TLS Certificate Verification: ACTIVE
+> Session Rotation On Login: ACTIVE
+> Secure / HttpOnly / SameSite Cookies: ACTIVE
+> Core Memory HTTP Denial: ACTIVE
+> Spoof-Resistant Client Identity: ACTIVE
+> Rate Limiting (inbox / handshake): ACTIVE
+> Media Type Sniffing: ACTIVE
+> PDO Error Suppression: ACTIVE
+> Zero Third-Party Requests: ACTIVE
+> Symmetric Key Exchange: ACTIVE
+> Tactical Signal Resonance: ACTIVE
+> The Anti-Loop Shield: ACTIVE
+> Cascading Chain-Purge Protocol: ACTIVE
+> Local Memory Vault: ACTIVE
+> Anti-Collision Engine: ACTIVE
+> The Oracle Sentinel: ACTIVE
+> The Nomadic Re-Sync Protocol: ACTIVE
+> The Lighthouse Protocol: OPT-IN
+> Anti-Brute Force Radar Lock: ACTIVE
+> Strict SSL Enforcement: ACTIVE
+> E2E Quantum Encryption: ACTIVE
+> Private Bunker Node Mode: ACTIVE</code></pre>
+                    </div>
+                </div>
+                
+                <aside class="t-side-panel t-card warning mb-0">
+                    <h3 class="text-warning mb-3">> LIMITATIONS</h3>
+                    <ul class="t-list-group m-0" style="border: none;">
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-yellow); padding: 10px 0;">
+                            <strong class="text-warning">Optional Discovery:</strong><br><span class="fs-small text-muted">Unless opted into the Lighthouse, you must connect manually.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-yellow); padding: 10px 0;">
+                            <strong class="text-warning">Eventual Consistency:</strong><br><span class="fs-small text-muted">Not real-time WebSockets. Signals rely on HTTP requests.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: 1px dashed var(--t-yellow); padding: 10px 0;">
+                            <strong class="text-warning">Manual Updates:</strong><br><span class="fs-small text-muted">Automatic updating was removed in v8.0 because it could not be verified. You apply releases yourself.</span>
+                        </li>
+                        <li class="t-list-item" style="border-bottom: none; padding: 10px 0;">
+                            <strong class="text-warning">Trust-Based:</strong><br><span class="fs-small text-muted">You are the sole moderator. Defend against spam via Disconnect.</span>
+                        </li>
+                    </ul>
+                </aside>
+            </div>
+        </section>
+
+        <section id="download" class="mb-5 t-container text-center">
+             <div class="t-card p-5" style="border-style: dashed;">
+                 <h2 class="text-success mb-3">> GENESIS_DEPLOYMENT</h2>
+                 <p class="text-muted mb-4">Ready to establish your sovereign node? Download the Drop-Pod Installer and start your mission.</p>
+                 <a href="https://github.com/jeannesbryan/relay-station/releases" target="_blank" class="t-btn font-bold t-glow px-4 py-3" style="font-size: 16px;">[ DOWNLOAD INSTALLER ]</a>
+                 <div id="latest-version" class="mt-4 fs-small text-muted">Current Release: <strong class="text-success">V8.0 AEGIS</strong></div>
+             </div>
+
+             <div class="t-card warning p-4 mt-4 text-left" style="border-style: dashed;">
+                 <h3 class="text-warning mb-2">> MANUAL_UPDATE_PROTOCOL</h3>
+                 <p class="text-muted fs-small mb-3">
+                     V8.0 removed the automatic updater <strong>on purpose</strong>. The old engine pulled a code payload
+                     from the network and executed it without ever establishing where it came from - disabling
+                     certificate checks on the beacon, accepting an unverified archive, and running the scripts inside it.
+                     Any single weakness along that chain meant remote code execution on your station.
+                     A supply chain you cannot verify is not a convenience, it is an attack surface.
+                 </p>
+                 <p class="text-muted fs-small mb-2">Updating is now a deliberate, operator-run procedure:</p>
+                 <div class="t-window mb-0">
+                     <div class="t-window-header"><span>update_sequence.sh</span><span>[ - ] [ X ]</span></div>
+                     <pre class="t-window-body"><code>> 1. Backup core memory:  cp data/relay_core.sqlite ~/relay-backup.sqlite
+> 2. Download the release and VERIFY its checksum or signature.
+> 3. Replace application files.
+>    DO NOT overwrite data/ media/ or khusus/lighthouse_config.php
+> 4. Run migrations if the release ships one:
+>    php khusus/upgrade_db.php
+> 5. Confirm the console reports the expected version.</code></pre>
+                 </div>
+             </div>
+        </section>
+
+        <footer class="text-center text-muted t-border-top pt-4 pb-4 mt-5">
+            <p class="mb-2">> TRANSMIT YOUR SIGNAL INTO THE VOID. LET THE RIGHT NODES FIND YOU.</p>
+            <p class="fs-small m-0">Interface framework: <a href="https://github.com/jeannesbryan/terminal" target="_blank" class="text-muted" style="text-decoration: underline;">Terminal UI</a> <span class="text-muted" style="opacity:0.6;">(vendored locally - no CDN)</span></p>
+            <p class="fs-small m-0 mt-1" style="opacity:0.6;">RELAY STATION V8.0 "AEGIS" - SECURITY &amp; ARCHITECTURE OVERHAUL</p>
+        </footer>
+
+    </div>
+
+    <script src="assets/terminal.js"></script>
+    <script>
+        // Utilities for HTML escaping and Copy to Clipboard
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        }
+
+        function copyCoordinates(url, btnElement) {
+            navigator.clipboard.writeText(url).then(() => {
+                const originalText = btnElement.innerText;
+                btnElement.innerText = '[ COPIED! ]';
+                btnElement.classList.add('success');
+                Terminal.toast('[✓] COORDINATES COPIED', 'success');
+                setTimeout(() => {
+                    btnElement.innerText = originalText;
+                    btnElement.classList.remove('success');
+                }, 2000);
+            }).catch(() => {
+                Terminal.toast('[!] FAILED TO COPY', 'danger');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                Terminal.typewrite('hero-title', '> RELAY STATION', 60, () => {
+                    document.getElementById('hero-title').innerHTML = '> RELAY STATION <span class="t-blink">_</span>';
+                    document.getElementById('hero-subtitle').style.opacity = '1';
+                    document.getElementById('hero-buttons').style.opacity = '1';
+                });
+            }, 1800); 
+
+            // NOTE: this page used to call api.github.com on load to display the
+            // newest tag. That is a third-party request with a visitor's IP in
+            // it, on a page whose whole argument is that a node should beacon
+            // to nobody. The version is stated statically instead; the releases
+            // link above is a hyperlink, which costs nothing until clicked.
+
+            // THE LIGHTHOUSE FETCH LOGIC
+            const LIGHTHOUSE_API_URL = 'https://emptyhub.my.id/api_directory.php';
+            const grid = document.getElementById('directory-grid');
+            const countDisplay = document.getElementById('node-count');
+
+            fetch(LIGHTHOUSE_API_URL)
+                .then(response => { if (!response.ok) throw new Error('Signal lost'); return response.json(); })
+                .then(data => {
+                    grid.innerHTML = '';
+                    countDisplay.innerText = data.count || 0;
+                    countDisplay.classList.remove('t-blink');
+
+                    if (data.count === 0 || !data.nodes || data.nodes.length === 0) {
+                        grid.innerHTML = `
+                            <div class="text-center text-warning" style="grid-column: 1 / -1; padding: 50px; border: 1px dashed var(--t-yellow);">
+                                > NO ACTIVE PUBLIC STATIONS DETECTED.
+                            </div>`;
+                        return;
+                    }
+
+                    data.nodes.forEach(node => {
+                        const lastSeenDate = new Date(node.last_seen + 'Z'); 
+                        const now = new Date();
+                        const diffHours = Math.floor((now - lastSeenDate) / (1000 * 60 * 60));
+                        
+                        let statusBadge = '<span class="t-badge success" style="font-size: 10px;">[ ONLINE ]</span>';
+                        if (diffHours > 24) {
+                            statusBadge = '<span class="t-badge warning" style="font-size: 10px;">[ WEAK_SIGNAL ]</span>';
+                        }
+
+                        const cardHTML = `
+                            <div class="t-card mb-0 node-card">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h3 class="font-bold text-success m-0" style="font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;" title="${escapeHTML(node.station_name)}">> ${escapeHTML(node.station_name)}</h3>
+                                    ${statusBadge}
+                                </div>
+                                
+                                <div class="text-muted fs-small mb-3" style="height: 60px; overflow: hidden; word-wrap: break-word;">
+                                    ${escapeHTML(node.station_bio) || '<em>[ No broadcast message ]</em>'}
+                                </div>
+                                
+                                <div class="t-border-top pt-2 d-flex justify-content-between align-items-center">
+                                    <div class="text-success fs-small" style="max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHTML(node.planet_url)}">
+                                        ${escapeHTML(node.planet_url)}
+                                    </div>
+                                    <button onclick="copyCoordinates('${escapeHTML(node.planet_url)}', this)" class="t-btn t-btn-sm copy-btn" style="white-space: nowrap; font-size: 10px; padding: 2px 5px;">
+                                        [ COPY ]
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        grid.insertAdjacentHTML('beforeend', cardHTML);
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                    countDisplay.innerText = 'ERROR';
+                    countDisplay.classList.replace('text-success', 'text-danger');
+                    grid.innerHTML = `
+                        <div class="text-center text-danger" style="grid-column: 1 / -1; padding: 50px; border: 1px dashed var(--t-red);">
+                            > CRITICAL FAILURE: CANNOT ESTABLISH LINK TO LIGHTHOUSE ENGINE.
+                        </div>`;
+                });
+        });
+    </script>
+</body>
+</html>
