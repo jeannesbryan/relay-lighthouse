@@ -429,7 +429,7 @@
                  <h2 class="text-success mb-3">> GENESIS_DEPLOYMENT</h2>
                  <p class="text-muted mb-4">Ready to establish your sovereign node? Download the Drop-Pod Installer and start your mission.</p>
                  <a href="https://github.com/jeannesbryan/relay-station/releases" target="_blank" class="t-btn font-bold t-glow px-4 py-3" style="font-size: 16px;">[ DOWNLOAD INSTALLER ]</a>
-                 <div id="latest-version" class="mt-4 fs-small text-muted">Current Release: <strong class="text-success">V8.0 AEGIS</strong></div>
+                 <div id="latest-version" class="mt-4 fs-small text-muted">Current Release: <strong class="text-success">V8.0.3 AEGIS</strong></div>
              </div>
 
              <div class="t-card warning p-4 mt-4 text-left" style="border-style: dashed;">
@@ -447,9 +447,9 @@
                      <pre class="t-window-body"><code>> 1. Backup core memory:  cp data/relay_core.sqlite ~/relay-backup.sqlite
 > 2. Download the release and VERIFY its checksum or signature.
 > 3. Replace application files.
->    DO NOT overwrite data/ media/ or khusus/lighthouse_config.php
+>    DO NOT overwrite data/ or media/
 > 4. Run migrations if the release ships one:
->    php khusus/upgrade_db.php
+>    php installer/upgrade_db.php
 > 5. Confirm the console reports the expected version.</code></pre>
                  </div>
              </div>
