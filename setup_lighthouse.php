@@ -42,11 +42,17 @@ try {
     echo "[ OK ] Mode WAL (Write-Ahead Logging) diaktifkan.\n";
 
     // 4. Cor Coran Tabel Utama
+    // [ V8.0.4 ] `version` is what each station reports about the software it
+    // is running. The lighthouse is the only place that sees every station, so
+    // it is the only place where "what is actually deployed out there" can be
+    // known - and it is known without any station contacting a third party.
+    // Nullable: a station older than v8.0.4 reports nothing.
     $db->exec("CREATE TABLE IF NOT EXISTS registry (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         planet_url TEXT UNIQUE NOT NULL,
         station_name TEXT NOT NULL,
         station_bio TEXT,
+        version TEXT DEFAULT NULL,
         last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
     

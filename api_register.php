@@ -47,6 +47,25 @@ if (relay_url_is_safe($planet_url) !== true) {
 // stored value no longer round-trips.
 $station_name = trim($signal['station_name'] ?? '');
 $station_bio  = trim($signal['station_bio'] ?? '');
+
+// [ V8.0.4 ] Software version reported by the station. This arrives from an
+// unauthenticated endpoint, so it is treated as untrusted: length-capped and
+// restricted to characters that can legitimately appear in a version string.
+// Anything else becomes null, which the directory renders as "not reported"
+// rather than echoing whatever was sent.
+$version = null;
+$version_raw = trim((string) ($signal['version'] ?? ''));
+// Normalise a leading "v" (only when a digit follows, so an arbitrary string
+// starting with the letter is not mangled). The directory renders this with a
+// "v" of its own, so storing "v8.0.4" would display as "vv8.0.4"; and two
+// stations reporting "v8.0.4" and "8.0.4" would otherwise compare as different
+// versions in the fleet tally.
+$version_raw = preg_replace('/^[vV](?=[0-9])/', '', $version_raw);
+if ($version_raw !== ''
+    && strlen($version_raw) <= 32
+    && preg_match('/^[0-9A-Za-z][0-9A-Za-z._+-]*$/', $version_raw)) {
+    $version = $version_raw;
+}
 if (mb_strlen($station_name) > 100) { $station_name = mb_substr($station_name, 0, 100); }
 if (mb_strlen($station_bio) > 500)  { $station_bio  = mb_substr($station_bio, 0, 500); }
 
@@ -82,7 +101,7 @@ try {
     // primitive aimed at the directory itself.
     //
     // It now requires an admin token. The config file is deliberately NOT in
-    // the repository: create khusus/lighthouse_config.php on the lighthouse
+    // the repository: create lighthouse_config.php on the lighthouse
     // host and put a random string in it.
     //
     //     <?php define('LIGHTHOUSE_ADMIN_TOKEN', '<64 random hex chars>');
@@ -132,16 +151,53 @@ try {
 
 
     // 📡 4. NORMAL PING / REGISTRATION
-    $stmt = $db->prepare("
-        INSERT INTO registry (planet_url, station_name, station_bio, last_seen)
-        VALUES (:url, :name, :bio, CURRENT_TIMESTAMP)
+    //
+    // [ V8.0.4 ] The version column is written with COALESCE so that a station
+    // older than v8.0.4 - which reports no version at all - cannot erase the
+    // version a newer registration already recorded for the same URL during a
+    // staged rollout. A missing value never overwrites a known one.
+    $upsert_sql = "
+        INSERT INTO registry (planet_url, station_name, station_bio, version, last_seen)
+        VALUES (:url, :name, :bio, :version, CURRENT_TIMESTAMP)
         ON CONFLICT(planet_url) DO UPDATE SET
             station_name = excluded.station_name,
             station_bio = excluded.station_bio,
+            version = COALESCE(excluded.version, registry.version),
             last_seen = CURRENT_TIMESTAMP
-    ");
+    ";
 
-    $stmt->execute([':url' => $planet_url, ':name' => $station_name, ':bio' => $station_bio]);
+    $params = [':url' => $planet_url, ':name' => $station_name, ':bio' => $station_bio, ':version' => $version];
+
+    // NOTE: prepare() is inside the try, not just execute(). PDO's SQLite driver
+    // uses native prepares, so the statement is parsed - and the unknown column
+    // detected - at prepare time. Wrapping only execute() looks correct and
+    // silently never catches anything; that mistake was made and caught here
+    // before shipping.
+    try {
+        $db->prepare($upsert_sql)->execute($params);
+    } catch (PDOException $e) {
+        // Self-healing migration. A hub installed before v8.0.4 has no version
+        // column, and the lighthouse has no migration script of its own - the
+        // setup file is deleted after install. Rather than require every hub
+        // operator to re-run setup (which would refuse anyway, being a run-once
+        // installer), the write path adds the column the first time it is
+        // needed and retries. Steady state costs nothing: SQLite only raises
+        // this on the very first registration after the upgrade.
+        // SQLite words this differently depending on the statement, and both
+        // have to be recognised or the migration silently never runs:
+        //   INSERT ... -> "table registry has no column named version"
+        //   SELECT ... -> "no such column: version"
+        // (Verified against the actual driver messages rather than assumed.)
+        $msg = $e->getMessage();
+        $missing_column = stripos($msg, 'no such column') !== false
+                       || stripos($msg, 'has no column named') !== false;
+        if (!$missing_column) {
+            throw $e;
+        }
+        $db->exec('ALTER TABLE registry ADD COLUMN version TEXT DEFAULT NULL');
+        error_log('[RELAY] lighthouse registry upgraded: added version column');
+        $db->prepare($upsert_sql)->execute($params);
+    }
 
     ob_end_clean();
     http_response_code(200);

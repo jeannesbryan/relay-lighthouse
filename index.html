@@ -429,7 +429,11 @@
                  <h2 class="text-success mb-3">> GENESIS_DEPLOYMENT</h2>
                  <p class="text-muted mb-4">Ready to establish your sovereign node? Download the Drop-Pod Installer and start your mission.</p>
                  <a href="https://github.com/jeannesbryan/relay-station/releases" target="_blank" class="t-btn font-bold t-glow px-4 py-3" style="font-size: 16px;">[ DOWNLOAD INSTALLER ]</a>
-                 <div id="latest-version" class="mt-4 fs-small text-muted">Current Release: <strong class="text-success">V8.0.3 AEGIS</strong></div>
+                 <!-- [ V8.0.4 ] Filled in from the directory response, not typed
+                      here. It reports the newest version any registered station
+                      says it is running, so it states what is actually deployed
+                      rather than what someone last remembered to edit. -->
+                 <div id="latest-version" class="mt-4 fs-small text-muted">Fleet Release: <strong class="text-success" id="fleet-version">scanning&hellip;</strong></div>
              </div>
 
              <div class="t-card warning p-4 mt-4 text-left" style="border-style: dashed;">
@@ -506,8 +510,14 @@
             // NOTE: this page used to call api.github.com on load to display the
             // newest tag. That is a third-party request with a visitor's IP in
             // it, on a page whose whole argument is that a node should beacon
-            // to nobody. The version is stated statically instead; the releases
-            // link above is a hyperlink, which costs nothing until clicked.
+            // to nobody. It was replaced by a static string - and that string
+            // then went stale, which is what static strings do.
+            //
+            // [ V8.0.4 ] The release below now comes from the directory response
+            // itself. Each station reports the version it is running when it
+            // registers, and the newest is shown. Same origin, no third party,
+            // nothing to forget to update. It describes the fleet as it actually
+            // is rather than as someone last remembered it.
 
             // THE LIGHTHOUSE FETCH LOGIC
             const LIGHTHOUSE_API_URL = 'https://emptyhub.my.id/api_directory.php';
@@ -520,6 +530,22 @@
                     grid.innerHTML = '';
                     countDisplay.innerText = data.count || 0;
                     countDisplay.classList.remove('t-blink');
+
+                    // [ V8.0.4 ] Fleet release, taken from what the stations
+                    // reported when they registered. Handled before the empty
+                    // check so the line still resolves on an empty directory
+                    // instead of sitting on "scanning..." forever.
+                    const fleetEl = document.getElementById('fleet-version');
+                    if (fleetEl) {
+                        if (data.fleet_version) {
+                            fleetEl.innerText = 'v' + data.fleet_version;
+                            fleetEl.title = 'Newest version reported by a registered station';
+                        } else {
+                            fleetEl.innerText = 'not reported';
+                            fleetEl.classList.replace('text-success', 'text-muted');
+                            fleetEl.title = 'No registered station has reported a version yet';
+                        }
+                    }
 
                     if (data.count === 0 || !data.nodes || data.nodes.length === 0) {
                         grid.innerHTML = `
@@ -539,11 +565,18 @@
                             statusBadge = '<span class="t-badge warning" style="font-size: 10px;">[ WEAK_SIGNAL ]</span>';
                         }
 
+                        // [ V8.0.4 ] The version this station reported, so an
+                        // operator can see at a glance who is behind on an
+                        // upgrade. Absent for a station that predates the field.
+                        const versionBadge = node.version
+                            ? `<span class="fs-small text-muted" style="font-size: 10px;" title="Software version reported by this station">v${escapeHTML(node.version)}</span>`
+                            : '';
+
                         const cardHTML = `
                             <div class="t-card mb-0 node-card">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h3 class="font-bold text-success m-0" style="font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;" title="${escapeHTML(node.station_name)}">> ${escapeHTML(node.station_name)}</h3>
-                                    ${statusBadge}
+                                    <div class="d-flex align-items-center gap-2">${versionBadge}${statusBadge}</div>
                                 </div>
                                 
                                 <div class="text-muted fs-small mb-3" style="height: 60px; overflow: hidden; word-wrap: break-word;">
