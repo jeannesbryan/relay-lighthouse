@@ -236,6 +236,45 @@ foreach ($cases as [$input, $expected, $label]) {
 }
 
 // ---------------------------------------------------------------------------
+echo "\n== the directory carries raw values, not HTML entities ==\n";
+// The landing page escapes every field before rendering it, so an entity in the
+// payload reaches the visitor as literal text - which is exactly what happened
+// to an apostrophe in a station bio, displayed as "&#039;". A JSON API carries
+// data; encoding is the renderer's business. This also matters for anything
+// other than the landing page: a CLI client or another node would receive the
+// mangled value with no way to know it was mangled.
+$trickyBio  = "not somebody else's server <b>&\"quoted\"</b>";
+$trickyName = "O'Brien <script>alert(1)</script>";
+
+clearRateLimit("$tmp/legacy/data/lighthouse.sqlite");
+httpJson($regL, 'POST', json_encode([
+    'action' => 'ping', 'planet_url' => 'https://github.com/tricky/relay',
+    'station_name' => $trickyName, 'station_bio' => $trickyBio, 'version' => '8.0.6',
+]));
+
+$d = httpJson($dirL);
+$t = null;
+foreach ($d['nodes'] as $n) {
+    if ($n['planet_url'] === 'https://github.com/tricky/relay') { $t = $n; }
+}
+
+check('the station with tricky text was stored', $t !== null);
+check('the bio round-trips byte for byte',
+      $t !== null && $t['station_bio'] === $trickyBio,
+      $t === null ? 'no row' : var_export($t['station_bio'], true));
+check('the station name round-trips byte for byte',
+      $t !== null && $t['station_name'] === $trickyName,
+      $t === null ? 'no row' : var_export($t['station_name'], true));
+check('an apostrophe is not turned into an entity',
+      $t !== null && strpos($t['station_bio'], "'") !== false
+                 && strpos($t['station_bio'], '&#039;') === false);
+check('no HTML entity at all leaked into the payload',
+      $t !== null && strpos($t['station_bio'], '&#') === false
+                 && strpos($t['station_name'], '&#') === false);
+check('the planet_url is not escaped either',
+      $t !== null && $t['planet_url'] === 'https://github.com/tricky/relay');
+
+// ---------------------------------------------------------------------------
 echo "\n== the fleet tally takes the highest reported version ==\n";
 clearRateLimit("$tmp/fresh/data/lighthouse.sqlite");
 // NODE_OLD sends no version at all - the shape a station older than v8.0.4

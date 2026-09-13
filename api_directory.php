@@ -66,14 +66,24 @@ try {
         }
     }
 
-    // Escape on output. Values are stored raw now, so whoever renders them
-    // controls the context; escaping here would double-encode.
+    // Values are returned RAW. Do not escape HTML here.
+    //
+    // This is a JSON API: the transport carries data, and the renderer decides
+    // how to encode it for its own context. HTML entities in a JSON payload are
+    // wrong twice over - they corrupt the value for any non-HTML consumer, and
+    // when the renderer escapes as well (as the landing page must, since these
+    // fields arrive from a public unauthenticated endpoint) the entity surfaces
+    // as literal text. That is what an apostrophe in a station bio became on the
+    // landing page: "not somebody else&#039;s server".
+    //
+    // The previous revision escaped here while the comment above it warned that
+    // escaping here would double-encode. It did.
     foreach ($nodes as &$node) {
-        $node['planet_url']   = htmlspecialchars((string) $node['planet_url'], ENT_QUOTES, 'UTF-8');
-        $node['station_name'] = htmlspecialchars((string) $node['station_name'], ENT_QUOTES, 'UTF-8');
-        $node['station_bio']  = htmlspecialchars((string) $node['station_bio'], ENT_QUOTES, 'UTF-8');
+        $node['planet_url']   = (string) $node['planet_url'];
+        $node['station_name'] = (string) $node['station_name'];
+        $node['station_bio']  = (string) ($node['station_bio'] ?? '');
         $node['version']      = isset($node['version']) && $node['version'] !== null
-            ? htmlspecialchars((string) $node['version'], ENT_QUOTES, 'UTF-8')
+            ? (string) $node['version']
             : null;
     }
     unset($node);

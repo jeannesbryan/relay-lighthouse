@@ -572,6 +572,21 @@
                             ? `<span class="fs-small text-muted" style="font-size: 10px;" title="Software version reported by this station">v${escapeHTML(node.version)}</span>`
                             : '';
 
+                        // These fields come from api_register.php, which is public and
+                        // unauthenticated, so everything is escaped here - the renderer
+                        // knows the context, the API does not. escapeHTML() is correct
+                        // for text and for HTML attributes.
+                        //
+                        // The COPY button used to interpolate the URL straight into an
+                        // inline onclick as a JS string literal. escapeHTML() is NOT
+                        // sufficient for that context: it produces &#39; for an
+                        // apostrophe, the HTML parser decodes it back to ', and a URL
+                        // containing a quote could then close the string literal and
+                        // inject script. (It was masked until now only because the API
+                        // was also escaping, mangling the quote into harmless entities -
+                        // the same double-escape that broke the bios.) The URL now
+                        // travels in a data attribute, where escaping is correct, and
+                        // the handler reads it from the element.
                         const cardHTML = `
                             <div class="t-card mb-0 node-card">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
@@ -587,7 +602,7 @@
                                     <div class="text-success fs-small" style="max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHTML(node.planet_url)}">
                                         ${escapeHTML(node.planet_url)}
                                     </div>
-                                    <button onclick="copyCoordinates('${escapeHTML(node.planet_url)}', this)" class="t-btn t-btn-sm copy-btn" style="white-space: nowrap; font-size: 10px; padding: 2px 5px;">
+                                    <button data-url="${escapeHTML(node.planet_url)}" onclick="copyCoordinates(this.dataset.url, this)" class="t-btn t-btn-sm copy-btn" style="white-space: nowrap; font-size: 10px; padding: 2px 5px;">
                                         [ COPY ]
                                     </button>
                                 </div>
